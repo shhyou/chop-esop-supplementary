@@ -1,0 +1,7 @@
+compiled/
+.DS_Store
+
+*.swp
+*#*
+*~
+
