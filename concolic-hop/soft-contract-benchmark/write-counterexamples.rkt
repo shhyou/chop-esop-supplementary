@@ -323,7 +323,7 @@ The variables in the counterexample have specific meaning, based on the first le
 (define-values (get-current-namespace make-new-namespace)
   (let ()
     (define ns #f)
-    (define (get-current-namespace) ns)
+    (define (get-current-namespace) (make-new-namespace) ns)
     (define (make-new-namespace)
       (set! ns (make-base-namespace))
       (parameterize ([current-namespace ns])
