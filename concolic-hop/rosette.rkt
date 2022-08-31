@@ -10,7 +10,7 @@
                   define-symbolic*
                   solve
                   model sat unsat
-                  with-asserts
+                  with-vc vc-true failed? normal? result-value result-state
                   solvable? constant?
                   solution? sat?))
 
@@ -24,18 +24,23 @@
 
 (define (shortcircuit-or-reraise e)
   (cond
-    [(equal? (exn-message e) "assert: failed")
+    [(regexp-match? #rx"assert.*(failed|contradict)" (exn-message e))
      (unsat)]
     [else
      (raise e)]))
 
 (define (solve/allow-exception thunk)
   (with-handlers ([exn:fail? shortcircuit-or-reraise])
-    (define-values (result all-assertions)
-      (with-asserts (let ()
-                      (thunk)
-                      (solve (void)))))
-    result))
+    (define svm-result
+      (with-vc vc-true
+        (let ()
+          (thunk)
+          (solve (void)))))
+    (cond
+      [(failed? svm-result)
+       (raise (result-value svm-result))]
+      [else
+       (result-value svm-result)])))
 
 (define (fresh-symbolic-variable solvable-type)
   (define-symbolic* Z solvable-type)

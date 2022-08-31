@@ -7,7 +7,7 @@
 (define build-deps '("rackunit-lib"
                      ))
 (define deps       '("base"
-                     "rosette"
+                     ["rosette" #:version "4.0"]
                      "data-lib"
                      "data-enumerate-lib"
 		     "gui-lib"
