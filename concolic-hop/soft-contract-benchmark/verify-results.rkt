@@ -59,7 +59,7 @@ audited by hand.
    "mk-list: broke its own contract"
 
    "hors/mult.sch"
-   "sqr: broke its own contract\n  promised: (and/c integer? (>=/c 1))"
+   "sqr: broke its own contract\n  promised: (>=/c 1)"
 
    "hors/neg.sch"
    "main: broke its own contract\n  promised: a number strictly greater than 0"
@@ -170,10 +170,10 @@ audited by hand.
    ">: contract violation\n  expected: real?"
 
    "others/factorial-acc.sch"
-   "factorial: broke its own contract\n  promised: (and/c integer? (>/c 1))\n  produced: 1"
+   #rx"^factorial: broke its own contract\n  promised: a number strictly greater than 1.+  produced: 1"
 
    "others/factorial.sch"
-   "factorial: broke its own contract\n  promised: (and/c integer? (>/c 1))\n  produced: 1"
+   #rx"^factorial: broke its own contract\n  promised: a number strictly greater than 1.+  produced: 1"
 
    "others/filter.sch"
    #rx"^filter: broke its own contract\n  promised: [^\n]*\n  produced: '[(][)]"
@@ -245,10 +245,10 @@ audited by hand.
    "cdr: contract violation\n  expected: pair?"
 
    "softy/length-acc.sch"
-   "len: broke its own contract\n  promised: (and/c integer? (>/c 0))\n  produced: 0"
+   #rx"^len: broke its own contract\n  promised: a number strictly greater than 0.+  produced: 0"
 
    "softy/length.sch"
-   "len: broke its own contract\n  promised: (and/c integer? (>/c 0))\n  produced: 0"
+   #rx"^len: broke its own contract\n  promised: a number strictly greater than 0.+  produced: 0"
 
    "softy/member.sch"
    "member: broke its own contract\n  promised: boolean?"
