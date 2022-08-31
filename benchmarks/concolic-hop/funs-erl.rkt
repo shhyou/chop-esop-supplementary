@@ -759,7 +759,7 @@ Substitutes for the generic function(), tuple() and any() specs:
   (test-property "f10" prop-f10)
   (test-property "f11" prop-f11
                  #:path-limit 500
-                 #:timeout 0.5
+                 #:timeout 1
                  #:strategy (simple-prioritize-branch-strategy 1000))
   (test-property "f12" prop-f12
                  #:all? 10)
