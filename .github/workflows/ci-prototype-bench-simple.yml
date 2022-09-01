@@ -52,7 +52,7 @@ jobs:
 
       - name: Cleanup Installation for Package Caching
         if: steps.cache-package.outputs.cache-hit != 'true'
-        run: ./github/helper-scripts/cleanup-pkgs.sh
+        run: ${GITHUB_WORKSPACE}/.github/helper-scripts/cleanup-pkgs.sh
 
   bench_cuter:
     name: CutEr funs.erl
