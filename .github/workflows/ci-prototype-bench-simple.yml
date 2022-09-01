@@ -32,8 +32,6 @@ jobs:
           distribution: 'full'
           variant: 'CS'
           version: ${{ env.RACKET_VERSION }}
-          dest: ${{ env.RACKET_DIR }}
-          sudo: never
 
       - name: Install Packages
         if: steps.cache-package.outputs.cache-hit != 'true'
@@ -79,8 +77,6 @@ jobs:
           distribution: 'full'
           variant: 'CS'
           version: ${{ env.RACKET_VERSION }}
-          dest: ${{ env.RACKET_DIR }}
-          sudo: never
 
       - uses: actions/download-artifact@v2
         with:
@@ -126,8 +122,6 @@ jobs:
           distribution: 'full'
           variant: 'CS'
           version: ${{ env.RACKET_VERSION }}
-          dest: ${{ env.RACKET_DIR }}
-          sudo: never
 
       - uses: actions/download-artifact@v2
         with:
