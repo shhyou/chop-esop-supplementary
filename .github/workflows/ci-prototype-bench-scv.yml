@@ -1,0 +1,112 @@
+name: Run SCV Benchmarks
+
+on:
+  push:
+    branches:
+      - run-scv
+
+env:
+  RACKET_DIR: ${{ github.workspace }}/racket
+  RACKET_VERSION: 8.6
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Packages
+        id: cache-package
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/racket
+            ~/.local/share/racket
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('concolic-hop-*/info.rkt') }}
+
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v1.8.1
+        with:
+          architecture: 'x64'
+          distribution: 'full'
+          variant: 'CS'
+          version: ${{ env.RACKET_VERSION }}
+          dest: ${{ env.RACKET_DIR }}
+          sudo: never
+
+      - name: Install Packages
+        if: steps.cache-package.outputs.cache-hit != 'true'
+        run: raco pkg install --auto --no-docs rosette
+
+      - name: Build and Save Bytecodes
+        id: build-prototype
+        run: |
+          raco pkg show -l rosette
+          raco pkg install --auto --no-docs
+          cd ${GITHUB_WORKSPACE}
+          zip -r prototype-bytecodes.zip $(find . -name compiled)
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: prototype-bytecodes
+          path: prototype-bytecodes.zip
+
+      - name: Cleanup Installation for Package Caching
+        if: steps.cache-package.outputs.cache-hit != 'true'
+        run: ./github/helper-scripts/cleanup-pkgs.sh
+
+  bench_scv:
+    name: SCV benchmark
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo apt-get install xvfb
+
+      - name: Cache Packages
+        id: cache-package
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/racket
+            ~/.local/share/racket
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('concolic-hop-*/info.rkt') }}
+
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v1.8.1
+        with:
+          architecture: 'x64'
+          distribution: 'full'
+          variant: 'CS'
+          version: ${{ env.RACKET_VERSION }}
+          dest: ${{ env.RACKET_DIR }}
+          sudo: never
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: prototype-bytecodes
+
+      - name: Build
+        id: build-prototype
+        run: |
+          unzip -DD prototype-bytecodes.zip
+          raco pkg install --auto --no-docs
+          racket -l concolic-hop/soft-contract-benchmark/convert
+          raco setup --pkgs chop-esop-supplementary
+
+      - name: Run SCV Benchmarks
+        run: |
+          xvfb-run --auto-servernum racket -l concolic-hop/soft-contract-benchmark/write-counterexamples | tee ${GITHUB_WORKSPACE}/scv.log
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: scv
+          path: scv.log
+
+      - name: Check SCV Results
+        run: |
+          racket -l concolic-hop/soft-contract-benchmark/verify-results
+
+      - name: Cleanup xvfb
+        uses: bcomnes/cleanup-xvfb@v1.0.6

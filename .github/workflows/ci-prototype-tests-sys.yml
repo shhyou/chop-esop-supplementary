@@ -1,0 +1,117 @@
+name: Prototype System Tests
+
+on:
+  push:
+    branches-ignore:
+      - run-bench
+      - run-scv
+  pull_request:
+    branches-ignore:
+      - run-bench
+      - run-scv
+
+env:
+  RACKET_DIR: ${{ github.workspace }}/racket
+  RACKET_VERSION: 8.6
+
+jobs:
+  # Right now, we setup and cache the build environment in the same
+  # job as building and testing the prototype.  Later jobs depend
+  # on the build environment and the bytecodes cached in this job.
+  #
+  # To change cached packages, update the raco command in the
+  # Install Packages step in this job.
+  prototype_units:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Packages
+        id: cache-package
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/racket
+            ~/.local/share/racket
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('concolic-hop-*/info.rkt') }}
+
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v1.8.1
+        with:
+          architecture: 'x64'
+          distribution: 'full'
+          variant: 'CS'
+          version: ${{ env.RACKET_VERSION }}
+          dest: ${{ env.RACKET_DIR }}
+          sudo: never
+
+      - name: Install Packages
+        if: steps.cache-package.outputs.cache-hit != 'true'
+        run: raco pkg install --auto --no-docs rosette
+
+      - name: Build
+        id: build-prototype
+        run: |
+          raco pkg show -l rosette
+          raco pkg install --auto --no-docs
+
+      - name: Prototype Unit Tests
+        run: |
+          cd ${GITHUB_WORKSPACE}/tests/concolic-hop
+          raco make -v private/*.rkt
+          PLTSTDOUT='info@GC info@concolic:test' raco test private engine-internals lang
+          racket -l- concolic-hop/soft-contract-benchmark/verify-results
+
+      - name: Save Bytecodes
+        run: zip -r prototype-bytecodes.zip $(find . -name compiled)
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: prototype-bytecodes
+          path: prototype-bytecodes.zip
+
+      - name: Cleanup Installation for Package Caching
+        if: steps.cache-package.outputs.cache-hit != 'true'
+        run: ./github/helper-scripts/cleanup-pkgs.sh
+
+  prototype_system:
+    name: System Tests
+    runs-on: ubuntu-latest
+    needs: prototype_units
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Packages
+        id: cache-package
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/racket
+            ~/.local/share/racket
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('concolic-hop-*/info.rkt') }}
+
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v1.8.1
+        with:
+          architecture: 'x64'
+          distribution: 'full'
+          variant: 'CS'
+          version: ${{ env.RACKET_VERSION }}
+          dest: ${{ env.RACKET_DIR }}
+          sudo: never
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: prototype-bytecodes
+
+      - name: Build
+        id: build-prototype
+        run: |
+          unzip -DD prototype-bytecodes.zip
+          raco pkg install --auto --no-docs
+
+      - name: Prototype System Tests
+        run: |
+          cd ${GITHUB_WORKSPACE}/tests/concolic-hop
+          PLTSTDOUT='info@GC info@concolic:test' raco test -j 2  --timeout 1800 full-search

@@ -1,0 +1,150 @@
+name: Simple Benchmarks
+
+on:
+  push:
+    branches:
+      - run-bench
+
+env:
+  RACKET_DIR: ${{ github.workspace }}/racket
+  RACKET_VERSION: 8.6
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Packages
+        id: cache-package
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/racket
+            ~/.local/share/racket
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('concolic-hop-*/info.rkt') }}
+
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v1.8.1
+        with:
+          architecture: 'x64'
+          distribution: 'full'
+          variant: 'CS'
+          version: ${{ env.RACKET_VERSION }}
+          dest: ${{ env.RACKET_DIR }}
+          sudo: never
+
+      - name: Install Packages
+        if: steps.cache-package.outputs.cache-hit != 'true'
+        run: raco pkg install --auto --no-docs rosette
+
+      - name: Build and Save Bytecodes
+        id: build-prototype
+        run: |
+          raco pkg show -l rosette
+          raco pkg install --auto --no-docs
+          cd ${GITHUB_WORKSPACE}
+          zip -r prototype-bytecodes.zip $(find . -name compiled)
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: prototype-bytecodes
+          path: prototype-bytecodes.zip
+
+      - name: Cleanup Installation for Package Caching
+        if: steps.cache-package.outputs.cache-hit != 'true'
+        run: ./github/helper-scripts/cleanup-pkgs.sh
+
+  bench_cuter:
+    name: CutEr funs.erl
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Packages
+        id: cache-package
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/racket
+            ~/.local/share/racket
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('concolic-hop-*/info.rkt') }}
+
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v1.8.1
+        with:
+          architecture: 'x64'
+          distribution: 'full'
+          variant: 'CS'
+          version: ${{ env.RACKET_VERSION }}
+          dest: ${{ env.RACKET_DIR }}
+          sudo: never
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: prototype-bytecodes
+
+      - name: Build
+        id: build-prototype
+        run: |
+          unzip -DD prototype-bytecodes.zip
+          raco pkg install --auto --no-docs
+
+      - name: Run CutEr Tests
+        run: |
+          cd ${GITHUB_WORKSPACE}/benchmarks/concolic-hop
+          PLTSTDOUT='info@GC debug@concolic:test' raco test --timeout 5400 funs-erl.rkt | grep -v -e 'chop-esop-supplementary/' -e 'collects/' | tee ${GITHUB_WORKSPACE}/funs-erl.log
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: funs-erl
+          path: funs-erl.log
+
+  bench_calls_functions:
+    name: calls-functions
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Packages
+        id: cache-package
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/racket
+            ~/.local/share/racket
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('concolic-hop-*/info.rkt') }}
+
+
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v1.8.1
+        with:
+          architecture: 'x64'
+          distribution: 'full'
+          variant: 'CS'
+          version: ${{ env.RACKET_VERSION }}
+          dest: ${{ env.RACKET_DIR }}
+          sudo: never
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: prototype-bytecodes
+
+      - name: Build
+        id: build-prototype
+        run: |
+          unzip -DD prototype-bytecodes.zip
+          raco pkg install --auto --no-docs
+
+      - name: Run calls-functons.rkt
+        run: |
+          cd ${GITHUB_WORKSPACE}/benchmarks/concolic-hop
+          PLTSTDOUT='info@GC debug@concolic:test' raco test --timeout 5400 -j 2 calls-functions | grep -v -e 'chop-esop-supplementary/' -e 'collects/' | tee ${GITHUB_WORKSPACE}/calls-functions.log
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: calls-functions
+          path: calls-functions.log
