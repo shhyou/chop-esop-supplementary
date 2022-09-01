@@ -23,7 +23,7 @@ jobs:
           path: |
             ~/.cache/racket
             ~/.local/share/racket
-          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('info.rkt') }}
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('.github/workflows/*') }}-${{ hashFiles('info.rkt') }}
 
       - name: Install Racket
         uses: Bogdanp/setup-racket@v1.8.1
@@ -68,7 +68,7 @@ jobs:
           path: |
             ~/.cache/racket
             ~/.local/share/racket
-          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('info.rkt') }}
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('.github/workflows/*') }}-${{ hashFiles('info.rkt') }}
 
       - name: Install Racket
         uses: Bogdanp/setup-racket@v1.8.1
@@ -112,7 +112,7 @@ jobs:
           path: |
             ~/.cache/racket
             ~/.local/share/racket
-          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('info.rkt') }}
+          key: ${{ runner.os }}-racket-${{ env.RACKET_VERSION }}-packages-${{ hashFiles('.github/workflows/*') }}-${{ hashFiles('info.rkt') }}
 
 
       - name: Install Racket

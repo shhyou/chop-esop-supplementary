@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for PKG in concolic-hop-model concolic-hop-prototype; do
+for PKG in chop-esop-supplementary; do
   echo Checking $PKG
   raco pkg show "$PKG" | grep "$PKG"
   if [[ $? -eq 0 ]]; then
